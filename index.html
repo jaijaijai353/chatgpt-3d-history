@@ -10,19 +10,7 @@
       padding: 0;
       overflow: hidden;
       font-family: 'Segoe UI', Tahoma, sans-serif;
-      background-color: #0b0c10;
-      color: white;
-    }
-
-    #lottie-background {
-      position: fixed;
-      width: 100vw;
-      height: 100vh;
-      top: 0;
-      left: 0;
-      z-index: 0;
-      pointer-events: none;
-      opacity: 0.3;
+      background-color: black;
     }
 
     #3d-graph {
@@ -51,49 +39,52 @@
   </style>
 </head>
 <body>
-  <div id="lottie-background"></div>
   <div id="3d-graph"></div>
   <div id="tooltip"></div>
 
-  <!-- 🎞 Scripts -->
+  <!-- Scripts -->
   <script src="https://unpkg.com/3d-force-graph"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-  <script src="https://unpkg.com/lottie-web@5.12.0/build/player/lottie.min.js"></script>
   <script src="https://unpkg.com/three-spritetext"></script>
 
   <script>
-    // 🎞 Lottie animated background
-    lottie.loadAnimation({
-      container: document.getElementById('lottie-background'),
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: 'https://lottie.host/7d8326cb-61ed-489e-9dc0-b490531e346e/OSJkwWwhqV.json'
-    });
-
     const tooltip = document.getElementById('tooltip');
+    const colorPalette = ['#FF4B4B', '#FFB74D', '#4FC3F7', '#AED581', '#9575CD', '#FFD600', '#F06292', '#4DB6AC', '#BA68C8', '#FF8A65'];
 
-    // 🌐 Setup 3D Force Graph
     const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
-      .backgroundColor('rgba(0,0,0,0)')
-      .nodeLabel(node => `${node.label}`)
+      .backgroundColor('black')
+      .nodeLabel(node => node.label)
       .nodeAutoColorBy('group')
       .nodeThreeObject(node => {
+        const groupColor = colorPalette[node.group % colorPalette.length];
         const sprite = new SpriteText(node.label);
         sprite.color = '#ffffff';
         sprite.textHeight = 8;
-        sprite.backgroundColor = 'rgba(255,255,255,0.03)';
+
+        // Glowing pulse for "important" nodes
+        if (node.important) {
+          const glowMaterial = new THREE.MeshBasicMaterial({
+            color: groupColor,
+            transparent: true,
+            opacity: 0.4,
+            depthWrite: false
+          });
+          const glow = new THREE.Mesh(
+            new THREE.SphereGeometry(15, 16, 16),
+            glowMaterial
+          );
+          glow.add(sprite);
+          return glow;
+        }
+
         return sprite;
       })
-      .nodeColor(node => {
-        const colorMap = ['#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444', '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'];
-        return colorMap[node.group % colorMap.length];
-      })
-      .linkColor(() => 'rgba(255,255,255,0.08)')
-      .linkWidth(link => link.value * 2)
-      .linkOpacity(0.35)
-      .linkDirectionalParticles(1)
-      .linkDirectionalParticleWidth(1.5)
+      .nodeColor(node => colorPalette[node.group % colorPalette.length])
+      .linkColor(link => colorPalette[link.source.group % colorPalette.length])
+      .linkWidth(1.8)
+      .linkOpacity(0.25)
+      .linkDirectionalParticles(0)
+      .enableNodeDrag(false)
       .onNodeHover(node => {
         if (node) {
           tooltip.style.display = 'block';
@@ -106,19 +97,36 @@
         alert(`📌 ${node.label}\n\n${node.preview}`);
       });
 
-    // 🔁 Load JSON graph (make sure filename matches exactly)
+    // Load the graph and apply static layout
     fetch("chatgpt_graph_data.json")
       .then(res => res.json())
       .then(data => {
+        data.nodes.forEach(node => {
+          node.fx = Math.random() * 300 - 150;
+          node.fy = Math.random() * 300 - 150;
+          node.fz = Math.random() * 300 - 150;
+        });
         Graph.graphData(data);
-      })
-      .catch(err => console.error("Failed to load JSON:", err));
 
-    // 🖱 Tooltip follow cursor
-    document.addEventListener("mousemove", (e) => {
+        // Starfield background
+        const scene = Graph.scene();
+        const stars = new THREE.Points(
+          new THREE.BufferGeometry().setAttribute('position',
+            new THREE.Float32BufferAttribute(
+              Array.from({ length: 3000 }, () => (Math.random() - 0.5) * 2000),
+              3
+            )
+          ),
+          new THREE.PointsMaterial({ color: 0xffffff, size: 1 })
+        );
+        scene.add(stars);
+      });
+
+    document.addEventListener("mousemove", e => {
       tooltip.style.left = e.pageX + 18 + "px";
       tooltip.style.top = e.pageY + 18 + "px";
     });
   </script>
 </body>
 </html>
+
