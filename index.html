@@ -12,14 +12,14 @@
       font-family: 'Segoe UI', Tahoma, sans-serif;
       background-color: black;
     }
-
     #3d-graph {
       position: absolute;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
       z-index: 1;
+      opacity: 0;
+      transition: opacity 2.5s ease-in-out;
     }
-
     #tooltip {
       position: absolute;
       background: rgba(0, 0, 0, 0.85);
@@ -32,83 +32,86 @@
       z-index: 10;
       max-width: 300px;
     }
-
-    canvas {
-      outline: none;
-    }
   </style>
 </head>
 <body>
   <div id="3d-graph"></div>
   <div id="tooltip"></div>
 
-  <!-- Scripts -->
+  <!-- 📦 Scripts -->
   <script src="https://unpkg.com/3d-force-graph"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://unpkg.com/three-spritetext"></script>
 
   <script>
     const tooltip = document.getElementById('tooltip');
-    const colorPalette = ['#FF4B4B', '#FFB74D', '#4FC3F7', '#AED581', '#9575CD', '#FFD600', '#F06292', '#4DB6AC', '#BA68C8', '#FF8A65'];
+
+    const colorMap = [
+      '#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444',
+      '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'
+    ];
 
     const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
       .backgroundColor('black')
       .nodeLabel(node => node.label)
-      .nodeAutoColorBy('group')
       .nodeThreeObject(node => {
-        const groupColor = colorPalette[node.group % colorPalette.length];
+        const color = colorMap[node.group % colorMap.length];
         const sprite = new SpriteText(node.label);
-        sprite.color = '#ffffff';
-        sprite.textHeight = 8;
+        sprite.color = color;
+        sprite.textHeight = node.size || 4;
 
-        // Glowing pulse for "important" nodes
-        if (node.important) {
-          const glowMaterial = new THREE.MeshBasicMaterial({
-            color: groupColor,
-            transparent: true,
-            opacity: 0.4,
-            depthWrite: false
-          });
-          const glow = new THREE.Mesh(
-            new THREE.SphereGeometry(15, 16, 16),
-            glowMaterial
-          );
-          glow.add(sprite);
-          return glow;
-        }
-
-        return sprite;
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.2,
+          depthWrite: false
+        });
+        const glow = new THREE.Mesh(
+          new THREE.SphereGeometry((node.size || 4) + 5, 16, 16),
+          glowMaterial
+        );
+        glow.add(sprite);
+        return glow;
       })
-      .nodeColor(node => colorPalette[node.group % colorPalette.length])
-      .linkColor(link => colorPalette[link.source.group % colorPalette.length])
-      .linkWidth(1.8)
-      .linkOpacity(0.25)
+      .nodeColor(node => colorMap[node.group % colorMap.length])
+      .linkColor(() => '#00faff')
+      .linkWidth(1)
+      .linkOpacity(0.1)
       .linkDirectionalParticles(0)
       .enableNodeDrag(false)
       .onNodeHover(node => {
-        if (node) {
-          tooltip.style.display = 'block';
-          tooltip.innerHTML = `<strong>${node.label}</strong><br><small>${node.preview}</small>`;
-        } else {
-          tooltip.style.display = 'none';
-        }
+        tooltip.style.display = node ? 'block' : 'none';
+        if (node) tooltip.innerHTML = `<strong>${node.label}</strong><br><small>${node.preview}</small>`;
       })
       .onNodeClick(node => {
         alert(`📌 ${node.label}\n\n${node.preview}`);
-      });
+      })
+      .d3Force('charge').strength(-140);
 
-    // Load the graph and apply static layout
-    fetch("chatgpt_graph_data.json")
+    // Fade-in animation
+    setTimeout(() => {
+      document.getElementById('3d-graph').style.opacity = 1;
+    }, 500);
+
+    // Camera rotation (orbit style)
+    let angle = 0;
+    setInterval(() => {
+      const r = 500;
+      Graph.cameraPosition(
+        { x: r * Math.sin(angle), y: r * 0.1, z: r * Math.cos(angle) },
+        { x: 0, y: 0, z: 0 },
+        0.02
+      );
+      angle += Math.PI / 360;
+    }, 20);
+
+    // Load your graph data
+    fetch("chatgpt_graph_data_reelstyle.json")
       .then(res => res.json())
       .then(data => {
-        data.nodes.forEach(node => {
-          node.fx = Math.random() * 300 - 150;
-          node.fy = Math.random() * 300 - 150;
-          node.fz = Math.random() * 300 - 150;
-        });
         Graph.graphData(data);
 
-        // Starfield background
+        // ✨ Add starfield
         const scene = Graph.scene();
         const stars = new THREE.Points(
           new THREE.BufferGeometry().setAttribute('position',
@@ -117,11 +120,12 @@
               3
             )
           ),
-          new THREE.PointsMaterial({ color: 0xffffff, size: 1 })
+          new THREE.PointsMaterial({ color: 0x00faff, size: 1 })
         );
         scene.add(stars);
       });
 
+    // 🖱 Follow mouse tooltip
     document.addEventListener("mousemove", e => {
       tooltip.style.left = e.pageX + 18 + "px";
       tooltip.style.top = e.pageY + 18 + "px";
