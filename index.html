@@ -1,31 +1,99 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChatGPT 3D History Graph</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatGPT 3D Thought Network</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0a0a; color: #fff; font-family: sans-serif; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background-color: #0b0c10;
+      color: white;
+    }
+
+    #lottie-background {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+
+    #3d-graph {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+    }
+
     #tooltip {
-      position: absolute; padding: 8px 12px; background: rgba(30,30,30,0.9); border: 1px solid #555;
-      border-radius: 6px; max-width: 300px; pointer-events: none; display: none; font-size: 14px;
+      position: absolute;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 10px 14px;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+      pointer-events: none;
+      z-index: 10;
+      max-width: 300px;
+    }
+
+    canvas {
+      outline: none;
     }
   </style>
 </head>
 <body>
+  <div id="lottie-background"></div>
   <div id="3d-graph"></div>
   <div id="tooltip"></div>
+
+  <!-- 🎞 Scripts -->
   <script src="https://unpkg.com/3d-force-graph"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://unpkg.com/lottie-web@5.12.0/build/player/lottie.min.js"></script>
+  <script src="https://unpkg.com/three-spritetext"></script>
+
   <script>
+    // 🎞 Lottie animated background
+    lottie.loadAnimation({
+      container: document.getElementById('lottie-background'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'https://lottie.host/7d8326cb-61ed-489e-9dc0-b490531e346e/OSJkwWwhqV.json'
+    });
+
     const tooltip = document.getElementById('tooltip');
+
+    // 🌐 Setup 3D Force Graph
     const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
-      .backgroundColor("#0a0a0a")
-      .nodeLabel('label')
+      .backgroundColor('rgba(0,0,0,0)')
+      .nodeLabel(node => `${node.label}`)
       .nodeAutoColorBy('group')
-      .linkColor(() => 'rgba(255,255,255,0.2)')
-      .linkOpacity(0.4)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.label);
+        sprite.color = '#ffffff';
+        sprite.textHeight = 8;
+        sprite.backgroundColor = 'rgba(255,255,255,0.03)';
+        return sprite;
+      })
+      .nodeColor(node => {
+        const colorMap = ['#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444', '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'];
+        return colorMap[node.group % colorMap.length];
+      })
+      .linkColor(() => 'rgba(255,255,255,0.08)')
       .linkWidth(link => link.value * 2)
+      .linkOpacity(0.35)
+      .linkDirectionalParticles(1)
+      .linkDirectionalParticleWidth(1.5)
       .onNodeHover(node => {
         if (node) {
           tooltip.style.display = 'block';
@@ -35,19 +103,25 @@
         }
       })
       .onNodeClick(node => {
-        alert(`📌 ${node.label}
-
-${node.preview}`);
+        alert(`📌 ${node.label}\n\n${node.preview}`);
       });
 
-    fetch('chatgpt_graph_data.json')
+    // 🔁 Load JSON graph
+    fetch("chatgpt_graph_data.json")
       .then(res => res.json())
-      .then(data => Graph.graphData(data));
+      .then(data => {
+        Graph.graphData(data);
+      });
 
-    document.addEventListener('mousemove', e => {
-      tooltip.style.left = e.pageX + 15 + 'px';
-      tooltip.style.top = e.pageY + 15 + 'px';
+    // 🖱 Tooltip follow cursor
+    document.addEventListener("mousemove", (e) => {
+      tooltip.style.left = e.pageX + 18 + "px";
+      tooltip.style.top = e.pageY + 18 + "px";
     });
   </script>
 </body>
 </html>
+
+
+
+   
