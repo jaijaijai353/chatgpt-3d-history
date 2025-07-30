@@ -106,12 +106,13 @@
         alert(`📌 ${node.label}\n\n${node.preview}`);
       });
 
-    // 🔁 Load JSON graph
+    // 🔁 Load JSON graph (make sure filename matches exactly)
     fetch("chatgpt_graph_data.json")
       .then(res => res.json())
       .then(data => {
         Graph.graphData(data);
-      });
+      })
+      .catch(err => console.error("Failed to load JSON:", err));
 
     // 🖱 Tooltip follow cursor
     document.addEventListener("mousemove", (e) => {
@@ -121,7 +122,3 @@
   </script>
 </body>
 </html>
-
-
-
-   
