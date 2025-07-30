@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatGPT 3D History Graph</title>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0a0a; color: #fff; font-family: sans-serif; }
+    #tooltip {
+      position: absolute; padding: 8px 12px; background: rgba(30,30,30,0.9); border: 1px solid #555;
+      border-radius: 6px; max-width: 300px; pointer-events: none; display: none; font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="3d-graph"></div>
+  <div id="tooltip"></div>
+  <script src="https://unpkg.com/3d-force-graph"></script>
+  <script>
+    const tooltip = document.getElementById('tooltip');
+    const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+      .backgroundColor("#0a0a0a")
+      .nodeLabel('label')
+      .nodeAutoColorBy('group')
+      .linkColor(() => 'rgba(255,255,255,0.2)')
+      .linkOpacity(0.4)
+      .linkWidth(link => link.value * 2)
+      .onNodeHover(node => {
+        if (node) {
+          tooltip.style.display = 'block';
+          tooltip.innerHTML = `<strong>${node.label}</strong><br><small>${node.preview}</small>`;
+        } else {
+          tooltip.style.display = 'none';
+        }
+      })
+      .onNodeClick(node => {
+        alert(`📌 ${node.label}
+
+${node.preview}`);
+      });
+
+    fetch('chatgpt_graph_data.json')
+      .then(res => res.json())
+      .then(data => Graph.graphData(data));
+
+    document.addEventListener('mousemove', e => {
+      tooltip.style.left = e.pageX + 15 + 'px';
+      tooltip.style.top = e.pageY + 15 + 'px';
+    });
+  </script>
+</body>
+</html>
