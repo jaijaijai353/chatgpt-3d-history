@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatGPT 3D Thought Network</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: black;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+
+    #3d-graph {
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      transition: opacity 2s ease;
+    }
+
+    #tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 10px 14px;
+      color: white;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+      pointer-events: none;
+      z-index: 10;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div id="3d-graph"></div>
+  <div id="tooltip"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/3d-force-graph"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://unpkg.com/three-spritetext"></script>
+
+  <script>
+    const tooltip = document.getElementById('tooltip');
+    const colorMap = ['#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444', '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'];
+
+    const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+      .backgroundColor('black')
+      .nodeLabel(node => node.label)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.label);
+        sprite.color = colorMap[node.group % colorMap.length];
+        sprite.textHeight = node.size || 4;
+        return sprite;
+      })
+      .nodeColor(node => colorMap[node.group % colorMap.length])
+      .linkColor(() => '#00faff')
+      .linkWidth(1)
+      .linkOpacity(0.12)
+      .enableNodeDrag(false)
+      .onNodeHover(node => {
+        tooltip.style.display = node ? 'block' : 'none';
+        if (node) {
+          tooltip.innerHTML = `<strong>${node.label}</strong><br><small>${node.preview}</small>`;
+        }
+      })
+      .onNodeClick(node => {
+        alert(`📌 ${node.label}\n\n${node.preview}`);
+      })
+      .d3Force('charge').strength(-150);
+
+    // Fade in graph after load
+    setTimeout(() => {
+      document.getElementById('3d-graph').style.opacity = 1;
+    }, 500);
+
+    // Camera Orbit
+    let angle = 0;
+    setInterval(() => {
+      const r = 500;
+      Graph.cameraPosition(
+        { x: r * Math.sin(angle), y: r * 0.1, z: r * Math.cos(angle) },
+        { x: 0, y: 0, z: 0 },
+        0.02
+      );
+      angle += Math.PI / 360;
+    }, 20);
+
+    // Load graph data
+    fetch("graph.json")
+      .then(res => res.json())
+      .then(data => {
+        Graph.graphData(data);
+
+        // Star background
+        const scene = Graph.scene();
+        const stars = new THREE.Points(
+          new THREE.BufferGeometry().setAttribute('position',
+            new THREE.Float32BufferAttribute(
+              Array.from({ length: 2000 }, () => (Math.random() - 0.5) * 2000),
+              3
+            )
+          ),
+          new THREE.PointsMaterial({ color: 0x00faff, size: 1 })
+        );
+        scene.add(stars);
+      });
+
+    // Tooltip tracking
+    document.addEventListener("mousemove", e => {
+      tooltip.style.left = e.pageX + 18 + "px";
+      tooltip.style.top = e.pageY + 18 + "px";
+    });
+  </script>
+</body>
+</html>
