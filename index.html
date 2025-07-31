@@ -9,22 +9,25 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
       background-color: black;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
     }
+
     #3d-graph {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      z-index: 1;
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
       opacity: 0;
-      transition: opacity 2.5s ease-in-out;
+      transition: opacity 2s ease;
     }
+
     #tooltip {
       position: absolute;
       background: rgba(0, 0, 0, 0.85);
       padding: 10px 14px;
-      color: #fff;
+      color: white;
       border-radius: 8px;
       font-size: 14px;
       display: none;
@@ -38,62 +41,46 @@
   <div id="3d-graph"></div>
   <div id="tooltip"></div>
 
-  <!-- 📦 Scripts -->
+  <!-- Scripts -->
   <script src="https://unpkg.com/3d-force-graph"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://unpkg.com/three-spritetext"></script>
 
   <script>
     const tooltip = document.getElementById('tooltip');
-
-    const colorMap = [
-      '#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444',
-      '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'
-    ];
+    const colorMap = ['#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444', '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'];
 
     const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
       .backgroundColor('black')
       .nodeLabel(node => node.label)
       .nodeThreeObject(node => {
-        const color = colorMap[node.group % colorMap.length];
         const sprite = new SpriteText(node.label);
-        sprite.color = color;
+        sprite.color = colorMap[node.group % colorMap.length];
         sprite.textHeight = node.size || 4;
-
-        const glowMaterial = new THREE.MeshBasicMaterial({
-          color: color,
-          transparent: true,
-          opacity: 0.2,
-          depthWrite: false
-        });
-        const glow = new THREE.Mesh(
-          new THREE.SphereGeometry((node.size || 4) + 5, 16, 16),
-          glowMaterial
-        );
-        glow.add(sprite);
-        return glow;
+        return sprite;
       })
       .nodeColor(node => colorMap[node.group % colorMap.length])
       .linkColor(() => '#00faff')
       .linkWidth(1)
-      .linkOpacity(0.1)
-      .linkDirectionalParticles(0)
+      .linkOpacity(0.12)
       .enableNodeDrag(false)
       .onNodeHover(node => {
         tooltip.style.display = node ? 'block' : 'none';
-        if (node) tooltip.innerHTML = `<strong>${node.label}</strong><br><small>${node.preview}</small>`;
+        if (node) {
+          tooltip.innerHTML = `<strong>${node.label}</strong><br><small>${node.preview}</small>`;
+        }
       })
       .onNodeClick(node => {
         alert(`📌 ${node.label}\n\n${node.preview}`);
       })
-      .d3Force('charge').strength(-140);
+      .d3Force('charge').strength(-150);
 
-    // Fade-in animation
+    // Fade in graph after load
     setTimeout(() => {
       document.getElementById('3d-graph').style.opacity = 1;
     }, 500);
 
-    // Camera rotation (orbit style)
+    // Camera Orbit
     let angle = 0;
     setInterval(() => {
       const r = 500;
@@ -105,18 +92,18 @@
       angle += Math.PI / 360;
     }, 20);
 
-    // Load your graph data
+    // Load graph data
     fetch("graph.json")
       .then(res => res.json())
       .then(data => {
         Graph.graphData(data);
 
-        // ✨ Add starfield
+        // Star background
         const scene = Graph.scene();
         const stars = new THREE.Points(
           new THREE.BufferGeometry().setAttribute('position',
             new THREE.Float32BufferAttribute(
-              Array.from({ length: 3000 }, () => (Math.random() - 0.5) * 2000),
+              Array.from({ length: 2000 }, () => (Math.random() - 0.5) * 2000),
               3
             )
           ),
@@ -125,7 +112,7 @@
         scene.add(stars);
       });
 
-    // 🖱 Follow mouse tooltip
+    // Tooltip tracking
     document.addEventListener("mousemove", e => {
       tooltip.style.left = e.pageX + 18 + "px";
       tooltip.style.top = e.pageY + 18 + "px";
@@ -133,4 +120,3 @@
   </script>
 </body>
 </html>
-
