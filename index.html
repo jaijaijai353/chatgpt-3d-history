@@ -12,7 +12,6 @@
       background-color: black;
       font-family: 'Segoe UI', Tahoma, sans-serif;
     }
-
     #3d-graph {
       width: 100vw;
       height: 100vh;
@@ -22,7 +21,6 @@
       opacity: 0;
       transition: opacity 2s ease;
     }
-
     #tooltip {
       position: absolute;
       background: rgba(0, 0, 0, 0.85);
@@ -40,12 +38,9 @@
 <body>
   <div id="3d-graph"></div>
   <div id="tooltip"></div>
-
-  <!-- Scripts -->
   <script src="https://unpkg.com/3d-force-graph"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://unpkg.com/three-spritetext"></script>
-
   <script>
     const tooltip = document.getElementById('tooltip');
     const colorMap = ['#00ffff', '#ff00ff', '#00ff66', '#ffaa00', '#ff4444', '#66ccff', '#cccc00', '#dd88ff', '#ff8888', '#88ffcc'];
@@ -75,22 +70,20 @@
       })
       .d3Force('charge').strength(-150);
 
-    // Tooltip tracking
     document.addEventListener("mousemove", e => {
       tooltip.style.left = e.pageX + 18 + "px";
       tooltip.style.top = e.pageY + 18 + "px";
     });
 
-    // Load graph
     fetch("graph.json")
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Fetch failed: " + res.status);
+        return res.json();
+      })
       .then(data => {
         Graph.graphData(data);
-
-        // Fade in after loading
         document.getElementById('3d-graph').style.opacity = 1;
 
-        // Star background
         const scene = Graph.scene();
         const stars = new THREE.Points(
           new THREE.BufferGeometry().setAttribute('position',
@@ -102,9 +95,12 @@
           new THREE.PointsMaterial({ color: 0x00faff, size: 1 })
         );
         scene.add(stars);
+      })
+      .catch(err => {
+        alert("Error loading graph.json: " + err.message);
+        console.error(err);
       });
 
-    // Camera Orbit
     let angle = 0;
     setInterval(() => {
       const r = 500;
