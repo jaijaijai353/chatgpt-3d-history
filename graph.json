@@ -1,0 +1,12 @@
+
+{
+  "nodes": [
+    { "id": "User", "group": 1 },
+    { "id": "AI", "group": 2 },
+    { "id": "Topic", "group": 3 }
+  ],
+  "links": [
+    { "source": "User", "target": "AI" },
+    { "source": "AI", "target": "Topic" }
+  ]
+}
